@@ -7,6 +7,7 @@ import { normalizeHtml } from "./html"
 import { waitForImpervaResolution } from "./impervaWait"
 import type { RouteLike } from "./sanitize"
 import { routeContinueOverrides } from "./sanitize"
+import { capturePageScreenshot } from "./screenshot"
 
 export interface Tier4Result extends TierResult {
   tier: 4
@@ -14,6 +15,7 @@ export interface Tier4Result extends TierResult {
   cookies?: Cookie[]
   userAgent?: string
   statusCode?: number
+  screenshot?: string
 }
 
 export async function runTier4(
@@ -24,6 +26,7 @@ export async function runTier4(
   extraHeaders?: Record<string, string>,
   method?: string,
   body?: string,
+  screenshot?: boolean,
 ): Promise<Tier4Result> {
   const start = Date.now()
 
@@ -174,6 +177,7 @@ export async function runTier4(
       cookies,
       userAgent: await page.evaluate(() => navigator.userAgent).catch(() => FINGERPRINT.userAgent),
       statusCode,
+      screenshot: screenshot ? await capturePageScreenshot(page) : undefined,
     }
   } catch (err) {
     return {

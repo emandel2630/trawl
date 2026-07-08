@@ -23,6 +23,11 @@ export interface ScrapeRequest {
   body?: string
   // Per-request proxy override — bypasses the server-configured proxy pool for this call.
   proxy?: string
+  // When true, the browser tiers (2-4) capture a base64 JPEG viewport screenshot
+  // of the rendered page and return it as `ScrapeResult.screenshot`. Tier 1 (plain
+  // HTTP fetch, no browser) never produces one. Off by default — screenshots add
+  // latency and payload size.
+  screenshot?: boolean
 }
 
 export interface TierResult {

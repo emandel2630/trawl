@@ -7,6 +7,7 @@ import { normalizeHtml } from "./html"
 import { waitForImpervaResolution } from "./impervaWait"
 import type { RouteLike } from "./sanitize"
 import { routeContinueOverrides } from "./sanitize"
+import { capturePageScreenshot } from "./screenshot"
 import { solvePageCaptchas } from "./solvers"
 
 export interface Tier3Result extends TierResult {
@@ -16,6 +17,7 @@ export interface Tier3Result extends TierResult {
   userAgent?: string
   statusCode?: number
   captchasSolved?: string[]
+  screenshot?: string
 }
 
 export async function runTier3(
@@ -26,6 +28,7 @@ export async function runTier3(
   extraHeaders?: Record<string, string>,
   method?: string,
   body?: string,
+  screenshot?: boolean,
 ): Promise<Tier3Result> {
   const start = Date.now()
 
@@ -169,6 +172,7 @@ export async function runTier3(
       userAgent: await page.evaluate(() => navigator.userAgent).catch(() => FINGERPRINT.userAgent),
       statusCode,
       captchasSolved: captchasSolved.length > 0 ? captchasSolved : undefined,
+      screenshot: screenshot ? await capturePageScreenshot(page) : undefined,
     }
   } catch (err) {
     return {
