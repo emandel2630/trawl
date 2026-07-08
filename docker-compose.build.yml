@@ -1,0 +1,16 @@
+# Build the trawl API from local source instead of pulling the prebuilt
+# `ghcr.io/germondai/trawl:latest` image. Overlay it on the default compose file:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+#
+# Docker merges this on top of docker-compose.yml, replacing the `trawl` service's
+# `image:` with a `build:` so your working-tree changes (e.g. the per-request proxy
+# auth fix and the screenshot feature) actually make it into the running container.
+# Everything else — redis, ports, env, healthcheck — comes from docker-compose.yml.
+services:
+  trawl:
+    # Null out the inherited image so Compose builds rather than pulls.
+    image: !reset null
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
