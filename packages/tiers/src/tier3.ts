@@ -126,18 +126,39 @@ export async function runTier3(
       return { tier: 3, status: "error", durationMs: Date.now() - start, reason: errMsg }
     }
 
+    // Capture once here, while the page is live, so blocked outcomes carry an
+    // image too — not just successes. Keeps trawl symmetric with always-
+    // screenshotting browser callers (e.g. the benchmark's apples-to-apples run).
+    const shot = screenshot ? await capturePageScreenshot(page) : undefined
+
     if (isCloudflarePage(html, {})) {
       const pageTitle = await page.title().catch(() => "?")
       const pageUrl = page.url()
       console.log(`[tier3] cloudflare-persistent: url="${pageUrl}" title="${pageTitle}" html=${html.length}b`)
-      return { tier: 3, status: "blocked", durationMs: Date.now() - start, reason: "cloudflare-persistent" }
+      return {
+        tier: 3,
+        status: "blocked",
+        durationMs: Date.now() - start,
+        reason: "cloudflare-persistent",
+        html: normalizeHtml(html),
+        statusCode,
+        screenshot: shot,
+      }
     }
 
     if (hasImpervaChallenge(html)) {
       const pageTitle = await page.title().catch(() => "?")
       const pageUrl = page.url()
       console.log(`[tier3] imperva-persistent: url="${pageUrl}" title="${pageTitle}" html=${html.length}b`)
-      return { tier: 3, status: "blocked", durationMs: Date.now() - start, reason: "imperva-persistent" }
+      return {
+        tier: 3,
+        status: "blocked",
+        durationMs: Date.now() - start,
+        reason: "imperva-persistent",
+        html: normalizeHtml(html),
+        statusCode,
+        screenshot: shot,
+      }
     }
 
     const rawCookies = await freshCtx.cookies()
@@ -172,7 +193,7 @@ export async function runTier3(
       userAgent: await page.evaluate(() => navigator.userAgent).catch(() => FINGERPRINT.userAgent),
       statusCode,
       captchasSolved: captchasSolved.length > 0 ? captchasSolved : undefined,
-      screenshot: screenshot ? await capturePageScreenshot(page) : undefined,
+      screenshot: shot,
     }
   } catch (err) {
     return {

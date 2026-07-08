@@ -48,6 +48,11 @@ export interface ScrapeResult {
   timings: TierResult[]
   totalMs: number
   captchasSolved?: string[] // captcha types solved during this request (e.g. ['turnstile', 'recaptcha-v2'])
+  screenshot?: string // base64 JPEG of the rendered page, when requested (browser tiers only)
+  // True when every browser tier failed to clear the challenge but a page was
+  // still rendered — the returned html/screenshot is the challenge wall, not the
+  // real content. Callers judge the html; /v1 maps this back to a FlareSolverr error.
+  blocked?: boolean
 }
 
 export interface SessionData {

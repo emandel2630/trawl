@@ -128,12 +128,19 @@ export async function runTier4(
       return { tier: 4, status: "error", durationMs: Date.now() - start, reason: "page returned empty content" }
     }
 
+    // Capture once here, while the page is live, so blocked outcomes carry an
+    // image too — not just successes (matches Tier 3 / always-screenshot callers).
+    const shot = screenshot ? await capturePageScreenshot(page) : undefined
+
     if (isCloudflarePage(html, {})) {
       return {
         tier: 4,
         status: "blocked",
         durationMs: Date.now() - start,
         reason: "cloudflare-persistent",
+        html: normalizeHtml(html),
+        statusCode,
+        screenshot: shot,
       }
     }
 
@@ -143,6 +150,9 @@ export async function runTier4(
         status: "blocked",
         durationMs: Date.now() - start,
         reason: "imperva-persistent",
+        html: normalizeHtml(html),
+        statusCode,
+        screenshot: shot,
       }
     }
 
@@ -177,7 +187,7 @@ export async function runTier4(
       cookies,
       userAgent: await page.evaluate(() => navigator.userAgent).catch(() => FINGERPRINT.userAgent),
       statusCode,
-      screenshot: screenshot ? await capturePageScreenshot(page) : undefined,
+      screenshot: shot,
     }
   } catch (err) {
     return {

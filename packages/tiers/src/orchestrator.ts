@@ -55,6 +55,27 @@ export async function scrape(req: ScrapeRequest, deps: OrchestratorDeps): Promis
     deps.onTierAttempt?.(r)
   }
 
+  // Build a `blocked: true` ScrapeResult from a browser tier that rendered a page
+  // it couldn't clear. Lets the terminal failure path return the challenge wall's
+  // html + screenshot instead of throwing, so callers still get something to look
+  // at and judge (the benchmark's apples-to-apples run needs an image every time).
+  const blockedResult = (
+    r: { html?: string; screenshot?: string; userAgent?: string; statusCode?: number },
+    tier: 3 | 4,
+  ): ScrapeResult => ({
+    url: req.url,
+    html: r.html ? normalizeHtml(r.html) : "",
+    cookies: [],
+    userAgent: r.userAgent ?? FINGERPRINT.userAgent,
+    statusCode: r.statusCode ?? 0,
+    tier,
+    sessionCached: false,
+    timings,
+    totalMs: Date.now() - totalStart,
+    screenshot: r.screenshot,
+    blocked: true,
+  })
+
   // Tier 1: plain HTTP fetch. Route it through the per-request proxy so the cheap
   // path egresses on the same IP as the browser tiers rather than the server's own.
   if (!req.skipHttp && maxTier >= 1) {
@@ -188,6 +209,9 @@ export async function scrape(req: ScrapeRequest, deps: OrchestratorDeps): Promis
     // supplied either per-request (req.proxy) or via the configured residential pool.
     let proxy4 = req.proxy ?? deps.residentialProxyPool?.next(domain)
     if (!proxy4) {
+      // No Tier 4 proxy to escalate to. If Tier 3 at least rendered the challenge
+      // wall, return that (with its screenshot) rather than throwing.
+      if (t3.html !== undefined || t3.screenshot) return blockedResult(t3, 3)
       throw new Error(
         `Tier 3 failed (${t3.reason ?? t3.status}). Set RESIDENTIAL_PROXY_URL (or pass a proxy per-request) to enable Tier 4 proxy escalation.`,
       )
@@ -236,6 +260,12 @@ export async function scrape(req: ScrapeRequest, deps: OrchestratorDeps): Promis
       }
     }
 
+    // Every browser tier failed. If Tier 4 (else Tier 3) still rendered the
+    // challenge wall, return it with its screenshot and blocked:true instead of
+    // throwing; only a tier that rendered nothing (empty/nav error) has no page
+    // to hand back, so those still throw.
+    if (t4.html !== undefined || t4.screenshot) return blockedResult(t4, 4)
+    if (t3.html !== undefined || t3.screenshot) return blockedResult(t3, 3)
     throw new Error(`All tiers exhausted. Last failure: ${t4.reason ?? t4.status}`)
   } finally {
     deps.releaseBrowser(handle.id)

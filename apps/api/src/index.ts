@@ -188,8 +188,11 @@ new Elysia()
       const scrapeRequest = buildScrapeRequestFromFlareSolverr(req)
       const result = await scrape(scrapeRequest, getDeps())
       return {
-        status: "ok",
-        message: "",
+        // A blocked result means no tier cleared the challenge — surface it as a
+        // FlareSolverr error (the response still carries the challenge page) so
+        // consumers like Prowlarr don't treat the wall as solved content.
+        status: result.blocked ? "error" : "ok",
+        message: result.blocked ? "Challenge not solved" : "",
         startTimestamp,
         endTimestamp: Date.now(),
         version: "2.0.0",
