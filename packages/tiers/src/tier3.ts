@@ -118,6 +118,13 @@ export async function runTier3(
       captchasSolved = solveResult.solved
     }
 
+    // Screenshot BEFORE reading html: capturePageScreenshot waits for the page to
+    // settle (networkidle), and a CF interstitial can clear during that wait. If we
+    // read html first, a slow-clearing challenge yields stale challenge html while
+    // the screenshot shows the real page — the scrape then reads as "blocked" but
+    // looks solved. Capturing the shot first, then html, keeps them consistent (and
+    // lets blocked outcomes carry an image, symmetric with always-shot callers).
+    const shot = screenshot ? await capturePageScreenshot(page) : undefined
     const html = await page.content()
 
     // Empty shell means the browser got nothing — treat as a load failure
@@ -125,11 +132,6 @@ export async function runTier3(
       const errMsg = gotoErr instanceof Error ? gotoErr.message.split("\n")[0] : "page returned empty content"
       return { tier: 3, status: "error", durationMs: Date.now() - start, reason: errMsg }
     }
-
-    // Capture once here, while the page is live, so blocked outcomes carry an
-    // image too — not just successes. Keeps trawl symmetric with always-
-    // screenshotting browser callers (e.g. the benchmark's apples-to-apples run).
-    const shot = screenshot ? await capturePageScreenshot(page) : undefined
 
     if (isCloudflarePage(html, {})) {
       const pageTitle = await page.title().catch(() => "?")

@@ -122,15 +122,15 @@ export async function runTier4(
 
     await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => {})
 
+    // Shot BEFORE html (see Tier 3): the screenshot's settle wait can outlast a
+    // slow-clearing challenge, so read html after it to keep verdict and image
+    // consistent, and let blocked outcomes carry an image too.
+    const shot = screenshot ? await capturePageScreenshot(page) : undefined
     const html = await page.content()
 
     if (html.length < 100) {
       return { tier: 4, status: "error", durationMs: Date.now() - start, reason: "page returned empty content" }
     }
-
-    // Capture once here, while the page is live, so blocked outcomes carry an
-    // image too — not just successes (matches Tier 3 / always-screenshot callers).
-    const shot = screenshot ? await capturePageScreenshot(page) : undefined
 
     if (isCloudflarePage(html, {})) {
       return {
