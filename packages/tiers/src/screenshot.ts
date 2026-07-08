@@ -13,7 +13,11 @@ export async function capturePageScreenshot(page: any): Promise<string | undefin
     // scrape, so we shoot whatever is on screen when the budget runs out.
     await page.waitForLoadState("networkidle", { timeout: 8000 }).catch(() => {})
     await page.waitForTimeout(500).catch(() => {})
-    const buf = await page.screenshot({ type: "jpeg", quality: 60, fullPage: true })
+    // Viewport-only (not fullPage): a full-page shot of a very long page renders a
+    // huge bitmap that spikes memory and, across a sustained batch, can OOM the
+    // browser. The above-the-fold viewport is enough to tell a real page from a
+    // challenge wall.
+    const buf = await page.screenshot({ type: "jpeg", quality: 60 })
     return Buffer.from(buf).toString("base64")
   } catch {
     return undefined

@@ -14,3 +14,8 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+    # Camoufox/Firefox accumulates memory over a long scrape run and can OOM. Auto-
+    # restart so one crash doesn't take the service down for the rest of a batch,
+    # and give Firefox more /dev/shm so it's less likely to die in the first place.
+    restart: unless-stopped
+    shm_size: 2gb
