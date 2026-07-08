@@ -1,5 +1,5 @@
 import type { BrowserHandle } from "@trawl/browser"
-import { FINGERPRINT } from "@trawl/browser"
+import { FINGERPRINT, toPlaywrightProxy } from "@trawl/browser"
 import type { Cookie, TierResult } from "@trawl/types"
 import { waitForChallengeResolution } from "./challengeWait"
 import { detectChallengeType, hasImpervaChallenge, isCloudflarePage } from "./detect"
@@ -37,7 +37,9 @@ export async function runTier4(
     // Camoufox handles fingerprinting at the C++ level — only the proxy needs to
     // be set at context creation (Playwright requires proxy at context init time).
     proxyContext = await handle.browser.newContext({
-      proxy: { server: proxyUrl },
+      // Split any `user:pass@` userinfo into Playwright's separate
+      // username/password fields — `proxy.server` alone won't authenticate.
+      proxy: toPlaywrightProxy(proxyUrl),
       viewport: null,
     })
     await proxyContext.addInitScript(() => {

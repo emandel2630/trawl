@@ -55,9 +55,10 @@ export async function scrape(req: ScrapeRequest, deps: OrchestratorDeps): Promis
     deps.onTierAttempt?.(r)
   }
 
-  // Tier 1: plain HTTP fetch
+  // Tier 1: plain HTTP fetch. Route it through the per-request proxy so the cheap
+  // path egresses on the same IP as the browser tiers rather than the server's own.
   if (!req.skipHttp && maxTier >= 1) {
-    const t1 = await runTier1(req.url, sanitizedHeaders, req.method, req.body)
+    const t1 = await runTier1(req.url, sanitizedHeaders, req.method, req.body, req.proxy)
     emit(t1)
     if (t1.status === "success" && t1.html !== undefined) {
       // Tier 1 doesn't acquire a browser (it's a plain HTTP fetch). Use a random fingerprint
@@ -85,8 +86,13 @@ export async function scrape(req: ScrapeRequest, deps: OrchestratorDeps): Promis
   const handle = await deps.acquireBrowser(domain)
 
   try {
-    // Tier 2: browser with cached session
-    const session = await deps.loadSession(domain)
+    // Tier 2: browser with cached session. Skip it when the caller supplied a
+    // per-request proxy: the cached session runs on the pool's shared context,
+    // which has no proxy set, so it would egress on the server's IP — and a
+    // cf_clearance cookie is bound to the IP that solved it, so replaying it from
+    // a different (proxied) egress fails anyway. Go straight to a fresh proxied
+    // Tier 3 context instead.
+    const session = req.proxy ? null : await deps.loadSession(domain)
     if (session && maxTier >= 2) {
       const remaining = maxTimeout - (Date.now() - totalStart)
       const t2 = await runTier2(req.url, handle, session, remaining, sanitizedHeaders, req.method, req.body)

@@ -335,6 +335,39 @@ export class BrowserPool {
   }
 }
 
+export interface PlaywrightProxy {
+  server: string
+  username?: string
+  password?: string
+}
+
+// Playwright/Camoufox `newContext({ proxy })` requires proxy credentials as
+// SEPARATE `username`/`password` fields — it does NOT parse userinfo out of the
+// `server` URL. TRAWL accepts proxies as `scheme://user:pass@host:port` (both the
+// PROXY_URL env pools and the per-request `proxy` field), so passing that string
+// straight through as `proxy.server` makes an authenticated proxy fail with
+// 407 Proxy Authentication Required. Split the userinfo out here so auth works.
+export const toPlaywrightProxy = (proxyUrl: string): PlaywrightProxy => {
+  // A schemeless `host:port` does NOT throw in `new URL` — it parses `host:` as
+  // the scheme and mangles the result — so only parse inputs with an authority.
+  // Playwright treats a bare `host:port` server as an HTTP proxy with no auth.
+  if (!proxyUrl.includes("://")) return { server: proxyUrl }
+  try {
+    const u = new URL(proxyUrl)
+    const username = u.username ? decodeURIComponent(u.username) : undefined
+    const password = u.password ? decodeURIComponent(u.password) : undefined
+    // Rebuild a bare `scheme://host:port` origin without the userinfo. `u.host`
+    // preserves an explicit port; `u.origin` would too, but building from
+    // protocol+host avoids the trailing slash the URL serializer adds.
+    const server = `${u.protocol}//${u.host}`
+    return username || password ? { server, username, password } : { server }
+  } catch {
+    // Not a parseable URL (e.g. schemeless `host:port`) — hand it to Playwright
+    // as-is; it treats a bare `host:port` as an HTTP proxy with no auth.
+    return { server: proxyUrl }
+  }
+}
+
 // Creates a fresh context from any browser with TRAWL init scripts applied.
 // A fresh context (no prior cookies/localStorage/service workers) gets CF managed-mode
 // treatment — challenge resolves in 3-4s vs ~40s for warm/reused contexts.
@@ -342,7 +375,7 @@ export class BrowserPool {
 export const newFreshContext = async (browser: any, options?: { proxy?: string }): Promise<any> => {
   const context = await browser.newContext({
     viewport: null,
-    ...(options?.proxy ? { proxy: { server: options.proxy } } : {}),
+    ...(options?.proxy ? { proxy: toPlaywrightProxy(options.proxy) } : {}),
   })
   await context.addInitScript(() => {
     window.onerror = () => true

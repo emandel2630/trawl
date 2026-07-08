@@ -14,6 +14,7 @@ export async function runTier1(
   extraHeaders?: Record<string, string>,
   method?: string,
   body?: string,
+  proxy?: string,
 ): Promise<Tier1Result> {
   const start = Date.now()
   try {
@@ -30,7 +31,14 @@ export async function runTier1(
         ...extraHeaders,
       },
       redirect: "follow",
-    })
+      // Bun's fetch honors a `proxy` option (full `scheme://user:pass@host:port`
+      // URL, credentials included). Without this the cheap HTTP path egresses on
+      // the server's own IP even when the caller supplied a proxy — so a Tier 1
+      // win would bypass the proxy the rest of the scrape uses. Not part of the
+      // standard RequestInit type, hence the cast; a harmless no-op on runtimes
+      // (Node) that ignore unknown fetch options.
+      ...(proxy ? { proxy } : {}),
+    } as RequestInit & { proxy?: string })
 
     const html = await res.text()
     const headers: Record<string, string> = {}
