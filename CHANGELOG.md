@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Optional blocked-outcome evidence: `blockedEvidence: true` on `POST /scrape` attaches the challenge wall the deepest browser tier stopped at — `html`, `url`, `statusCode`, `reason`, and the `screenshot` when one was requested — to the **500 body**, alongside the existing `error` and `timings`. A blocked scrape stays a failure and `ScrapeResult` never carries a wall as content (#53); this only makes the failure diagnosable and keeps the page as evidence. Off by default — without the flag nothing is read on the branch that gives up. Failures with no page to read (Tier 1, a context or page that never opened, a hard network failure, `about:neterror`, an empty document, pool exhaustion) carry `timings` only. The wall's markup is capped by `BLOCKED_EVIDENCE_MAX_HTML_CHARS` and flagged `htmlTruncated` past it, and a capture failure leaves the evidence off the body rather than changing the outcome.
+
 ## [1.5.0] - 2026-09-04
 
 ### Changed
