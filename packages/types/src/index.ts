@@ -52,6 +52,11 @@ export interface ScrapeRequest {
   // CSS selector that also ends the settle window early. Only meaningful alongside
   // `captureResponses`.
   waitForSelector?: string
+  // Opt-in MHTML archive of the page from the browser tiers (2-4), returned as
+  // `ScrapeResult.mhtml`. Assembled from the subresources the response listener observes,
+  // not snapshotted by the engine — Firefox has no Page.captureSnapshot. Off by default:
+  // it reads every archivable subresource body.
+  mhtml?: boolean
 }
 
 // One browser console message. Shaped after WebDriver's browser log so a consumer can
@@ -139,6 +144,12 @@ export interface ScrapeResult {
   // Present (possibly empty, meaning nothing matched) only when the request asked for
   // capture and a browser tier served the page.
   capturedResponses?: CapturedResponseEntry[]
+  // Multipart/related archive of the page: the rendered document first, then the CSS,
+  // script, image and font subresources that were observed loading. Same presence rules
+  // as `consoleLogs`. An approximation of a browser "Save as MHTML", not a byte-faithful
+  // snapshot — resources served from cache are absent, and anything dropped for a byte
+  // budget is listed in the archive's own final part.
+  mhtml?: string
 }
 
 export interface SessionData {

@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Optional MHTML archive: `mhtml: true` on `POST /scrape` returns a `multipart/related` archive of the page in `ScrapeResult.mhtml` — the rendered document first, then the stylesheets, scripts, images and fonts observed loading, each with its own `Content-Location`. Assembled from the responses the browser tiers already see rather than snapshotted by the engine (Firefox has no `Page.captureSnapshot`), so it is an approximation of "Save as MHTML": a resource served from cache or fetched before the listener attached is absent. Off by default — without the flag no subresource body is read. Part count, per-part bytes, reads in flight and total archive size are bounded and tunable via `MHTML_*`; an oversize part is omitted whole rather than trimmed, and every omission is counted in an `X-Trawl-Omitted-Resources` header and listed in a final part so a capped archive is still a valid MHTML.
+
 ## [1.5.0] - 2026-09-04
 
 ### Changed

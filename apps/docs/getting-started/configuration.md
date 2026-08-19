@@ -258,6 +258,31 @@ bodies with a valid `Content-Length` are read. Compressed or unknown-size bodies
 returned with `body: null` and an error. Declared sizes are reserved cumulatively before
 reads start, so concurrent responses cannot exceed the total read budget.
 
+## MHTML Archives
+
+Only read when a request sets `mhtml: true` — see
+[Native API](/api-reference/native-api#mhtml-archives). Without it no subresource body is
+read. The archive keeps many small parts rather than a few large bodies, so it carries
+budgets of its own rather than sharing the response-body ones.
+
+| Variable | Default | Purpose |
+| --- | ---: | --- |
+| `MHTML_MAX_PARTS` | `200` | Subresources archived per page |
+| `MHTML_MAX_PART_BYTES` | `2097152` | Bytes per subresource; a larger one is omitted whole |
+| `MHTML_MAX_TOTAL_CHARS` | `8388608` | Encoded characters across all subresources of one page — the size of the archive itself |
+| `MHTML_MAX_INFLIGHT_READS` | `32` | Subresource bodies read at the same time; a burst past this is omitted rather than held |
+| `MHTML_MAX_OMISSION_RECORDS` | `100` | Omissions listed by URL in the archive; the rest are only counted |
+
+Bodies are read as they arrive, so a page whose subresources all complete at once is
+bounded twice over: by `MHTML_MAX_INFLIGHT_READS`, and by the archive budget itself
+wherever the response declared a `Content-Length`. At the defaults an archiving request
+holds at most the archive (8 MiB) plus its reads in flight.
+
+A subresource is omitted rather than trimmed — a truncated stylesheet or image is corrupt,
+not partial. Every omission is counted in the archive's `X-Trawl-Omitted-Resources` header
+and listed in its final part, so an archive that hits a cap is still valid and still says
+what is missing. An assembly failure leaves `mhtml` unset and never fails the scrape.
+
 ## CAPTCHA audio and media tools
 
 TRAWL uses ffmpeg while solving supported CAPTCHA challenges. reCAPTCHA audio is converted before

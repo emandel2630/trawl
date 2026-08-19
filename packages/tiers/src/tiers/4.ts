@@ -41,6 +41,7 @@ export interface Tier4Result extends TierResult {
   networkLogs?: NetworkLogEntry[]
   redirectChain?: string[]
   capturedResponses?: CapturedResponseEntry[]
+  mhtml?: string
 }
 
 export async function runTier4(
@@ -230,6 +231,7 @@ export async function runTier4(
       screenshot: shot,
       ...evidence,
       redirectChain: capture.redirectChain ? mainResponse.redirectChain : undefined,
+      mhtml: pageCapture.archive(page.url(), html),
     }
   } catch (err) {
     return {

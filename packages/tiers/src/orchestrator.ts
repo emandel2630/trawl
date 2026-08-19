@@ -83,6 +83,7 @@ export async function scrape(
     captureResponses: req.captureResponses,
     settleTimeout: req.settleTimeout,
     waitForSelector: req.waitForSelector,
+    mhtml: req.mhtml,
   }
 
   const sanitizedHeaders = sanitizeHeaders(req.headers)
@@ -225,6 +226,7 @@ export async function scrape(
           networkLogs: t2.networkLogs,
           redirectChain: t2.redirectChain,
           capturedResponses: t2.capturedResponses,
+          mhtml: t2.mhtml,
         }
       }
       // Session failed — purge it
@@ -313,6 +315,7 @@ export async function scrape(
         networkLogs: t3.networkLogs,
         redirectChain: t3.redirectChain,
         capturedResponses: t3.capturedResponses,
+        mhtml: t3.mhtml,
       }
     }
 
@@ -400,6 +403,7 @@ export async function scrape(
         networkLogs: t4.networkLogs,
         redirectChain: t4.redirectChain,
         capturedResponses: t4.capturedResponses,
+        mhtml: t4.mhtml,
       }
     }
 

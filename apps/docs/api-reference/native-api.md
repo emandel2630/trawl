@@ -25,6 +25,7 @@ interface ScrapeRequest {
   captureResponses?: string[]            // URL patterns whose response bodies to capture, default none
   settleTimeout?: number                 // ms to wait after load for a match, default 15000
   waitForSelector?: string               // CSS selector that ends the settle window early
+  mhtml?: boolean                        // assemble an MHTML archive of the page, default false
 }
 ```
 
@@ -46,6 +47,7 @@ interface ScrapeRequest {
 | `captureResponses` | string[] | — | URL patterns — a substring, or a glob matched against the whole URL when the pattern contains `*` or `?` — whose response bodies are returned as `capturedResponses` (browser tiers 2–4)     |
 | `settleTimeout` | number | 15000  | Milliseconds to hold the page open after load waiting for a match; ends early on the first captured body, on `waitForSelector`, or on network idle. Only read alongside `captureResponses`  |
 | `waitForSelector` | string | —    | CSS selector that also ends the settle window early. Only read alongside `captureResponses`                                                                                                 |
+| `mhtml` | boolean | false        | Assemble a `multipart/related` MHTML archive of the page on the browser tiers (2–4) and return it as `mhtml`. An approximation of "Save as MHTML", not an engine snapshot — see the note below |
 
 Captured response bodies, headers, console messages, and URLs can contain credentials,
 tokens, or personal data. Treat these opt-in diagnostic fields as sensitive output.
@@ -70,6 +72,7 @@ interface ScrapeResult {
   networkLogs?: NetworkLogEntry[]  // resource timings, same presence rules as consoleLogs
   redirectChain?: string[]     // URLs the main document walked, same presence rules as consoleLogs
   capturedResponses?: CapturedResponseEntry[]  // matched response bodies, [] when nothing matched
+  mhtml?: string               // multipart/related archive of the page, only when requested and a browser tier served the page
 }
 
 interface ConsoleLogEntry {
@@ -107,6 +110,22 @@ interface TierResult {
   reason?: string
 }
 ```
+
+## MHTML Archives
+
+`mhtml: true` returns a single `multipart/related` document: the rendered DOM first, then
+the stylesheets, scripts, images and fonts that were observed loading. It is pure 7-bit
+ASCII with CRLF line endings, so it can be written straight to a `.mhtml` file, and every
+part carries a `Content-Location` so a reader can resolve it back to its URL.
+
+It is an **assembled approximation, not an engine snapshot.** Firefox exposes no
+equivalent of Chromium's `Page.captureSnapshot`, so the archive is built from what the
+response listener saw: a resource the browser served from its own cache, fetched before
+the listener attached, or refused to hand over is absent. Anything dropped for a byte
+budget is counted in the `X-Trawl-Omitted-Resources` header and listed in a final
+`text/plain` part, so an archive that hits a cap is still a valid MHTML that says what it
+is missing. Bounds are tunable via `MHTML_*` — see
+[Configuration](/getting-started/configuration#mhtml-archives).
 
 ## Examples
 
