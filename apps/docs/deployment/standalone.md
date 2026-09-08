@@ -79,7 +79,9 @@ docker build \
   -t trawl .
 ```
 
-This adds approximately 891 MB to the image. Other build arguments pin or validate bundled
+This adds approximately 891 MB to the image. Every release is also published prebuilt this way as
+`ghcr.io/germondai/trawl:<version>-fonts` / `:latest-fonts`, so a `screenshot` consumer does not
+need to build locally. Other build arguments pin or validate bundled
 dependencies and normally should not be overridden: `UBO_VERSION`, `UBO_AMO_FILE_ID`, `UBO_SHA256`,
 `GEOLITE_CITY_MIN_BYTES`, and (for the baseline image) `BUN_VERSION`.
 

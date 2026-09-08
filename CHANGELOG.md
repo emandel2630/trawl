@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Publish a `-fonts` flavor of every release image (`:X.Y.Z-fonts`, `:latest-fonts`) built with `CAMOUFOX_KEEP_SPOOFED_OS_FONTS=1`, so callers who consume `screenshot` output can pull an image whose spoofed Windows/macOS font bundles are present instead of building one.
+
 ## [1.5.0] - 2026-09-04
 
 ### Changed
